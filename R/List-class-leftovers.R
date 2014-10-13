@@ -1,0 +1,80 @@
+### =========================================================================
+### IMPORTANT NOTE - 9/4/2014
+### Most of the stuff that used to be in the IRanges/R/List-class.R file
+### was moved to the S4Vectors package (to R/List-class.R).
+### The stuff that could not be moved there was *temporarily* kept here in
+### List-class-leftovers.R but will need to find a new home (in S4Vectors
+### or in IRanges).
+###
+
+## NOTE: while the 'c' function does not have an 'x', the generic does
+## c() is a primitive, so 'x' can be missing; dispatch is by position,
+## although sometimes this does not work so well, so it's best to keep
+## names off the parameters whenever feasible.
+setMethod("c", "SimpleList",
+          function(x, ..., recursive = FALSE) {
+              slot(x, "listData") <-
+                do.call(c, lapply(unname(list(x, ...)), as.list))
+              if (!is.null(mcols(x)))
+                mcols(x) <- rbind.mcols(x, ...)
+              x
+          })
+
+.stack.ind <- function(x, index.var = "name") {
+  if (length(names(x)) > 0) {
+    spaceLabels <- names(x)
+  } else {
+    spaceLabels <- seq_len(length(x))
+  }
+  ind <- Rle(factor(spaceLabels, levels = unique(spaceLabels)),
+             elementLengths(x))
+  do.call(DataFrame, structure(list(ind), names = index.var))
+}
+
+### FIXME: need a recursive argument, when TRUE we call stack on
+### unlist result, instead of coercing to DataFrame.
+
+setMethod("stack", "List",
+          function(x, index.var = "name", value.var = "value", name.var = NULL)
+          {
+            df <- DataFrame(.stack.ind(x, index.var),
+                            as(unlist(x, use.names=FALSE), "DataFrame"))
+            colnames(df)[2] <- value.var
+            if (!is.null(name.var)) {
+              nms <- as.character(unlist(lapply(x, names)))
+              if (length(nms) == 0L) {
+                rngs <- IRanges(1L, width=elementLengths(x))
+                nms <- as.character(as.integer(rngs))
+              }
+              df[[name.var]] <- factor(nms, unique(nms))
+            }
+            if (!is.null(mcols(x))) {
+              df <- cbind(df, mcols(x))
+            }
+            df
+          })
+
+setMethod("aggregate", "List",
+          function(x, by, FUN, start = NULL, end = NULL, width = NULL,
+                   frequency = NULL, delta = NULL, ..., simplify = TRUE)
+          {
+              if (!missing(by) && is(by, "RangesList")) {
+                  if (length(x) != length(by))
+                      stop("for Ranges 'by', 'length(x) != length(by)'")
+                  y <- as.list(x)
+                  result <-
+                    lapply(structure(seq_len(length(x)), names = names(x)),
+                           function(i)
+                               aggregate(y[[i]], by = by[[i]], FUN = FUN,
+                                         frequency = frequency, delta = delta,
+                                         ..., simplify = simplify))
+                  ans <- try(SimpleAtomicList(result), silent = TRUE)
+                  if (inherits(ans, "try-error"))
+                      ans <- S4Vectors:::new_SimpleList_from_list("SimpleList",
+                                                                  result)
+              } else {
+                  ans <- callNextMethod()
+              }
+              ans
+          })
+
