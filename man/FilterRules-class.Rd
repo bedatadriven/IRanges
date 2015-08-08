@@ -31,6 +31,7 @@
 \alias{params}
 \alias{params,FilterClosure-method}
 \alias{coerce,standardGeneric,FilterClosure-method}
+\alias{coerce,function,FilterClosure-method}
 \alias{show,FilterClosure-method}
 
 \title{Collection of Filter Rules}
