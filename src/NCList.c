@@ -1087,7 +1087,7 @@ static void pp_find_overlaps(
 		old_nhit = IntAE_get_nelt(yh_buf);
 		if (circle_len != NA_INTEGER) {
 			/* delete duplicates */
-			IntAE_qsort(xh_buf, old_nhit, 0);
+			IntAE_qsort(xh_buf, old_nhit);
 			IntAE_uniq(xh_buf, old_nhit);
 		}
 		new_nhit = IntAE_get_nelt(xh_buf);
